@@ -2,5 +2,5 @@ from pydantic import BaseModel
 
 
 
-class RegisterBlockchainInvoiceDTO(BaseModel):
+class BlockchainTransactionDTO(BaseModel):
     transaction_hash: str

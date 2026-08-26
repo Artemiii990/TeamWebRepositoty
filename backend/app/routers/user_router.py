@@ -1,30 +1,17 @@
-from fastapi import APIRouter, HTTPException
-from fastapi import Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
 
-from backend.postgre_sql.database import SessionLocal
-from backend.postgre_sql.table import Invoices
+from backend.postgre_sql.database import get_db
+from backend.postgre_sql.tables.users import Users
 
-from backend.app.blockchain.connection import contract
-from backend.app.models.invoice import Invoice
-from backend.app.models.dtos.create_invoice_dto import CreateInvoiceDTO
-from backend.app.models.dtos.confirm_payment_dto import ConfirmPaymentDTO
-from backend.app.models.dtos.register_blockchain import RegisterBlockchainInvoiceDTO
-from backend.app.models.statuses import Statuses
-from backend.app.blockchain.connection import w3
+from backend.app.models.user import User
+from backend.app.models.dtos.register_user_dto import RegisterUserDTO
+from backend.app.models.roles import Roles
+from backend.app.models.dtos.blockchain_transaction_dto import BlockchainTransactionDTO
+
+from backend.app.blockchain.connection import user_contract, w3
 
 
-
-
-
-def get_db():
-    db = SessionLocal()
-
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 
@@ -32,53 +19,26 @@ user_router = APIRouter(prefix="/user", tags=["User"])
 
 
 
-@user_router.post("/createInvoice", response_model=Invoice)
-async def create_invoice(data: CreateInvoiceDTO, db: Session = Depends(get_db)):
-    invoice = Invoices(
-        Merchant=data.merchant,
-        Customer=data.customer,
-        Description=data.description,
-        Amount=data.amount,
-        Timestamp=datetime.utcnow(),
-        Status=Statuses.WAITING_PAYMENT,
-        BlockchainInvoiceId=None,
-        TransactionHash=None
-    )
+@user_router.get("/{wallet}", response_model=User)
+async def get_user(wallet: str, db: Session = Depends(get_db)):
+    user = db.query(Users).filter(Users.Wallet == wallet.lower()).first()
 
-    db.add(invoice)
-    db.commit()
-    db.refresh(invoice)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User was not found")
 
 
-    return Invoice(
-        invoice_id=invoice.Id,
-        merchant=invoice.Merchant,
-        customer=invoice.Customer,
-        description=invoice.Description,
-        amount=invoice.Amount,
-        timestamp=invoice.Timestamp,
-        status=invoice.Status,
-        blockchain_invoice_id=None,
-        transaction_hash=None
+    return User(
+        id = user.Id,
+        wallet = user.Wallet,
+        name = user.Name,
+        role = user.Role,
+        active = user.Active
     )
 
 
 
-@user_router.post("/invoice/{invoice_id}/synchronizeWithBlockchain")
-async def register_blockchain(invoice_id: int, data: RegisterBlockchainInvoiceDTO, db: Session = Depends(get_db)):
-    if w3 is None:
-        raise HTTPException(status_code=400, detail="RPC error")
-
-
-    invoice = db.query(Invoices).filter(Invoices.Id == invoice_id).first()
-
-    if invoice is None:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-    if invoice.BlockchainInvoiceId is not None:
-        raise HTTPException(status_code=400, detail="Blockchain invoice already registered")
-
-
+@user_router.post("/register")
+async def register_user(data: RegisterUserDTO, db: Session = Depends(get_db)):
     try:
         transaction = w3.eth.get_transaction_receipt(data.transaction_hash)
     except Exception:
@@ -87,148 +47,91 @@ async def register_blockchain(invoice_id: int, data: RegisterBlockchainInvoiceDT
     if transaction["status"] != 1:
         raise HTTPException(status_code=400, detail="Transaction failed")
 
-    if transaction["from"].lower() != invoice.Merchant.lower():
-        raise HTTPException(status_code=400, detail="Invalid seller")
-
     if transaction["to"] is None:
         raise HTTPException(status_code=400, detail="Invalid transaction")
-    if transaction["to"].lower() != contract.address.lower():
-        raise HTTPException(status_code=400, detail="Transaction was not sent to payment contract")
+    if transaction["to"].lower() != user_contract.address.lower():
+        raise HTTPException(status_code=400, detail="Transaction was not sent to UserRegistry")
 
-
-    events = contract.events.InvoiceCreated().process_receipt(transaction)
+    events = user_contract.events.UserRegistered().process_receipt(transaction)
 
     if not events:
-        raise HTTPException(status_code=400, detail="InvoiceCreated event not found")
-
-    event = events[0]
-
-    blockchain_invoice_id = event["args"]["invoiceId"]
-    merchant = event["args"]["merchant"]
-    amount = event["args"]["amount"]
-    description = event["args"]["description"]
-
-    if merchant.lower() != invoice.Merchant.lower():
-        raise HTTPException(status_code=400, detail="Wrong merchant")
-
-    if amount != invoice.Amount:
-        raise HTTPException(status_code=400, detail="Wrong amount")
-
-    if description != invoice.Description:
-        raise HTTPException(status_code=400, detail="Wrong description")
+        raise HTTPException(status_code=400, detail="UserRegistered event not found")
 
 
-    invoice.BlockchainInvoiceId = blockchain_invoice_id
+    event = events[0]["args"]
 
+    wallet = event["wallet"].lower()
+    name = event["name"]
+    role_value = event["role"]
+
+    if role_value == 1: role = Roles.MERCHANT
+    elif role_value == 2: role = Roles.CUSTOMER
+    else: raise HTTPException(status_code=400, detail="Invalid user role")
+
+    existing_user = db.query(Users).filter(Users.Wallet == wallet).first()
+
+    if existing_user is not None:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+
+    user = Users(
+        Wallet = wallet,
+        Name = name,
+        Role = role,
+        Active = True
+    )
+
+    db.add(user)
     db.commit()
-    db.refresh(invoice)
+    db.refresh(user)
 
 
-    return {
-        "invoice_id": invoice.Id,
-        "blockchain_invoice_id": invoice.BlockchainInvoiceId,
-        "status": invoice.Status,
-        "transaction_hash": data.transaction_hash
-    }
+    return User(
+        id = user.Id,
+        wallet = user.Wallet,
+        name = user.Name,
+        role = user.Role,
+        active = user.Active
+    )
 
 
 
-@user_router.post("/invoice/{invoice_id}/pay")
-async def pay_invoice(invoice_id: int, data: ConfirmPaymentDTO, db: Session = Depends(get_db)):
-    if w3 is None:
-        raise HTTPException(status_code=400, detail="RPC error")
-
-    
-    invoice = db.query(Invoices).filter(Invoices.Id == invoice_id).first()
-
-    if invoice is None:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-    if invoice.BlockchainInvoiceId is None:
-        raise HTTPException(status_code=400, detail="Invoice is not registered on blockchain")
-
-    if invoice.Status == Statuses.PAID:
-        return {
-            "invoice_id": invoice.Id,
-            "status": invoice.Status,
-            "transaction_hash": invoice.TransactionHash
-        }
-
-
+@user_router.post("/deactivate")
+async def deactivate_user(data: BlockchainTransactionDTO, db: Session = Depends(get_db)):
     try:
         transaction = w3.eth.get_transaction_receipt(data.transaction_hash)
-    except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
+    except Exception:
+        raise HTTPException(status_code=400, detail="Transaction not found")
 
     if transaction["status"] != 1:
         raise HTTPException(status_code=400, detail="Transaction failed")
 
-    if transaction["from"].lower() != invoice.Customer.lower():
-        raise HTTPException(status_code=400, detail="Wrong transaction sender")
-
     if transaction["to"] is None:
         raise HTTPException(status_code=400, detail="Invalid transaction")
-    if transaction["to"].lower() != contract.address.lower():
-        raise HTTPException(status_code=400, detail="Transaction was not sent to payment contract")
+    if transaction["to"].lower() != user_contract.address.lower():
+        raise HTTPException(status_code=400, detail="Wrong contract")
 
 
-
-    events = contract.events.InvoicePaid().process_receipt(transaction)
+    events = user_contract.events.UserDeactivated().process_receipt(transaction)
 
     if not events:
-        raise HTTPException(status_code=400, detail="InvoicePaid event not found")
+        raise HTTPException(status_code=400, detail="UserDeactivated event not found")
 
-    
-    event = events[0]
 
-    blockchain_invoice_id = event["args"]["invoiceId"]
-    customer = event["args"]["customer"]
-    amount = event["args"]["amount"]
+    wallet = events[0]["args"]["wallet"].lower()
 
-    if blockchain_invoice_id != invoice.BlockchainInvoiceId:
-        raise HTTPException(status_code=400, detail="Wrong invoice")
+    user = db.query(Users).filter(Users.Wallet == wallet).first()
 
-    if amount != invoice.Amount:
-        raise HTTPException(status_code=400, detail="Wrong amount")
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    if customer.lower() != invoice.Customer.lower():
-        raise HTTPException(status_code=400,detail="Wrong customer")
-
-    invoice.Status = Statuses.PAID
-    invoice.TransactionHash = data.transaction_hash
+    user.Active = False
 
     db.commit()
-    db.refresh(invoice)
 
 
     return {
-        "invoice_id": invoice_id,
-        "status": invoice.Status,
-        "transaction_hash": invoice.TransactionHash
+        "wallet": wallet,
+        "active": False,
+        "transaction_hash": data.transaction_hash
     }
-
-
-
-@user_router.get("/getInvoice/{invoice_id}", response_model=Invoice)
-async def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
-    invoice = db.query(Invoices).filter(Invoices.Id == invoice_id).first()
-
-    if invoice is None:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-
-
-    return Invoice(
-        invoice_id=invoice.Id,
-
-        merchant=invoice.Merchant,
-        customer=invoice.Customer,
-
-        description=invoice.Description,
-        amount=invoice.Amount,
-        timestamp=invoice.Timestamp,
-        status=invoice.Status,
-
-        blockchain_invoice_id=invoice.BlockchainInvoiceId,
-        transaction_hash=invoice.TransactionHash
-    )
