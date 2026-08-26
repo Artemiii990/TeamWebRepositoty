@@ -1,50 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract CryptoPaymentGateway {
-    // Возможные статусы invoice
+import "./Admin.sol";
+import "./User.sol";
+
+contract CryptoPaymentGateway is Admin {
     enum InvoiceStatus {
-        WAITING_PAYMENT, // Ожидает оплаты
-        PAID, // Оплачен
-        CONFIRMED // Подтверждён
+        WAITING_PAYMENT,
+        PAID
     }
 
-    // Структура invoice
     struct Invoice {
-        uint256 invoiceId; // Уникальный ID invoice
-        address payable merchant; // Адрес продавца
-        address customer; // Адрес покупателя
-        string description; // Описание товара или услуги
-        uint256 amount; // Сумма оплаты в wei
-        uint256 timestamp; // Время создания invoice
-        InvoiceStatus status; // Текущий статус invoice
+        uint256 invoiceId;
+        address payable merchant;
+        address customer;
+        uint256 amount;
+        string description;
+        uint256 timestamp;
+        InvoiceStatus status;
     }
 
-    // =========================
-    // Администратор
-    // =========================
-
-    // Адрес администратора / владельца контракта
-    address public owner;
-
-    // Состояние контракта: остановлен или работает
-    bool public paused;
-
-    // =========================
-    // Invoice
-    // =========================
-
-    // ID следующего создаваемого invoice
     uint256 private nextInvoiceId = 1;
 
-    // Хранилище invoice по их ID
     mapping(uint256 => Invoice) private invoices;
 
-    // =========================
-    // События
-    // =========================
+    bool public paused;
 
-    // Вызывается при создании нового invoice
+    UserRegistry public userRegistry;
+
     event InvoiceCreated(
         uint256 indexed invoiceId,
         address indexed merchant,
@@ -53,81 +36,98 @@ contract CryptoPaymentGateway {
         uint256 timestamp
     );
 
-    // Вызывается после оплаты invoice
     event InvoicePaid(
         uint256 indexed invoiceId,
         address indexed customer,
         uint256 amount
     );
 
-    // Вызывается при остановке контракта
     event ContractPaused(address indexed admin);
 
-    // Вызывается при возобновлении работы контракта
     event ContractUnpaused(address indexed admin);
 
-    // =========================
-    // Конструктор
-    // =========================
+    event EmergencyWithdrawal(address indexed admin, uint256 amount);
 
-    // При deployment создатель контракта становится администратором
-    constructor() {
-        owner = msg.sender;
+    constructor(address userRegistryAddress) {
+        require(userRegistryAddress != address(0), "Invalid registry");
+
+        userRegistry = UserRegistry(userRegistryAddress);
     }
 
-    // =========================
-    // Модификаторы
-    // =========================
-
-    // Только администратор может выполнять функцию
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not owner");
-        _;
-    }
-
-    // Функция доступна только когда контракт не остановлен
     modifier whenNotPaused() {
         require(!paused, "Contract is paused");
         _;
     }
 
-    // =========================
-    // Функции администратора
-    // =========================
+    modifier onlyMerchant() {
+        require(userRegistry.userExists(msg.sender), "User is not registered");
 
-    // Остановить работу контракта
-    function pause() external onlyOwner {
+        require(
+            userRegistry.getUserRole(msg.sender) ==
+                UserRegistry.UserRole.MERCHANT,
+            "User is not merchant"
+        );
+
+        require(userRegistry.isActive(msg.sender), "User is inactive");
+
+        _;
+    }
+
+    modifier onlyCustomer() {
+        require(userRegistry.userExists(msg.sender), "User is not registered");
+
+        require(
+            userRegistry.getUserRole(msg.sender) ==
+                UserRegistry.UserRole.CUSTOMER,
+            "User is not customer"
+        );
+
+        require(
+            userRegistry.getUserRole(msg.sender) ==
+                UserRegistry.UserRole.CUSTOMER,
+            "User is not customer"
+        );
+
+        require(userRegistry.isActive(msg.sender), "User is inactive");
+
+        _;
+    }
+
+    function pause() external onlyAdmin {
         paused = true;
 
         emit ContractPaused(msg.sender);
     }
 
-    // Возобновить работу контракта
-    function unpause() external onlyOwner {
+    function unpause() external onlyAdmin {
         paused = false;
 
         emit ContractUnpaused(msg.sender);
     }
 
-    // =========================
-    // Функции продавца
-    // =========================
+    function emergencyWithdraw(uint256 amount) external onlyAdmin {
+        require(
+            amount <= address(this).balance,
+            "Insufficient contract balance"
+        );
 
-    // Создание нового invoice
+        (bool success, ) = payable(admin).call{value: amount}("");
+
+        require(success, "Withdrawal failed");
+
+        emit EmergencyWithdrawal(admin, amount);
+    }
+
     function createInvoice(
         uint256 amount,
         string calldata description
-    ) external whenNotPaused returns (uint256 invoiceId) {
-        // Сумма должна быть больше нуля
+    ) external whenNotPaused onlyMerchant returns (uint256 invoiceId) {
         require(amount > 0, "Amount must be greater than zero");
 
-        // Описание не должно быть пустым
         require(bytes(description).length > 0, "Description cannot be empty");
 
-        // Получаем новый ID и увеличиваем счётчик
         invoiceId = nextInvoiceId++;
 
-        // Создаём invoice и сохраняем его в blockchain
         invoices[invoiceId] = Invoice({
             invoiceId: invoiceId,
             merchant: payable(msg.sender),
@@ -138,7 +138,6 @@ contract CryptoPaymentGateway {
             status: InvoiceStatus.WAITING_PAYMENT
         });
 
-        // Сообщаем blockchain о создании invoice
         emit InvoiceCreated(
             invoiceId,
             msg.sender,
@@ -148,55 +147,44 @@ contract CryptoPaymentGateway {
         );
     }
 
-    // =========================
-    // Функции покупателя
-    // =========================
-
-    // Оплата invoice
-    function payInvoice(uint256 invoiceId) external payable whenNotPaused {
-        // Получаем invoice из blockchain
+    function payInvoice(
+        uint256 invoiceId
+    ) external payable whenNotPaused onlyCustomer {
         Invoice storage invoice = invoices[invoiceId];
 
-        // Проверяем существование invoice
         require(invoice.invoiceId != 0, "Invoice does not exist");
 
-        // Invoice должен ожидать оплаты
         require(
             invoice.status == InvoiceStatus.WAITING_PAYMENT,
             "Invoice is not waiting for payment"
         );
 
-        // Отправленная сумма должна точно совпадать
-        // с суммой invoice
         require(msg.value == invoice.amount, "Incorrect payment amount");
 
-        // Сохраняем адрес покупателя
         invoice.customer = msg.sender;
 
-        // Меняем статус на PAID
         invoice.status = InvoiceStatus.PAID;
 
-        // Отправляем ETH продавцу
         (bool success, ) = invoice.merchant.call{value: msg.value}("");
 
-        // Проверяем успешность перевода
         require(success, "Payment transfer failed");
 
-        // Сообщаем blockchain об оплате invoice
         emit InvoicePaid(invoiceId, msg.sender, msg.value);
     }
 
-    // =========================
-    // Функции просмотра
-    // =========================
-
-    // Получить информацию об invoice
     function getInvoice(
         uint256 invoiceId
     ) external view returns (Invoice memory) {
-        // Проверяем существование invoice
         require(invoices[invoiceId].invoiceId != 0, "Invoice does not exist");
 
         return invoices[invoiceId];
+    }
+
+    function getContractBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function getNextInvoiceId() external view returns (uint256) {
+        return nextInvoiceId;
     }
 }
