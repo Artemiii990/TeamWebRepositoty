@@ -7,8 +7,7 @@ import "./User.sol";
 contract CryptoPaymentGateway is Admin {
     enum InvoiceStatus {
         WAITING_PAYMENT,
-        PAID,
-        CONFIRMED
+        PAID
     }
 
     struct Invoice {
@@ -41,11 +40,6 @@ contract CryptoPaymentGateway is Admin {
         uint256 indexed invoiceId,
         address indexed customer,
         uint256 amount
-    );
-
-    event InvoiceStatusChanged(
-        uint256 indexed invoiceId,
-        InvoiceStatus newStatus
     );
 
     event ContractPaused(address indexed admin);
@@ -88,14 +82,16 @@ contract CryptoPaymentGateway is Admin {
             "User is not customer"
         );
 
+        require(
+            userRegistry.getUserRole(msg.sender) ==
+                UserRegistry.UserRole.CUSTOMER,
+            "User is not customer"
+        );
+
         require(userRegistry.isActive(msg.sender), "User is inactive");
 
         _;
     }
-
-    // =========================
-    // Admin
-    // =========================
 
     function pause() external onlyAdmin {
         paused = true;
@@ -107,19 +103,6 @@ contract CryptoPaymentGateway is Admin {
         paused = false;
 
         emit ContractUnpaused(msg.sender);
-    }
-
-    function changeInvoiceStatus(
-        uint256 invoiceId,
-        InvoiceStatus newStatus
-    ) external onlyAdmin {
-        Invoice storage invoice = invoices[invoiceId];
-
-        require(invoice.invoiceId != 0, "Invoice does not exist");
-
-        invoice.status = newStatus;
-
-        emit InvoiceStatusChanged(invoiceId, newStatus);
     }
 
     function emergencyWithdraw(uint256 amount) external onlyAdmin {
@@ -134,10 +117,6 @@ contract CryptoPaymentGateway is Admin {
 
         emit EmergencyWithdrawal(admin, amount);
     }
-
-    // =========================
-    // Merchant
-    // =========================
 
     function createInvoice(
         uint256 amount,
@@ -168,10 +147,6 @@ contract CryptoPaymentGateway is Admin {
         );
     }
 
-    // =========================
-    // Customer
-    // =========================
-
     function payInvoice(
         uint256 invoiceId
     ) external payable whenNotPaused onlyCustomer {
@@ -196,10 +171,6 @@ contract CryptoPaymentGateway is Admin {
 
         emit InvoicePaid(invoiceId, msg.sender, msg.value);
     }
-
-    // =========================
-    // View
-    // =========================
 
     function getInvoice(
         uint256 invoiceId
