@@ -1,132 +1,275 @@
+:root {
+  --bg: #f5f6f8;
+  --bg-elevated: #ffffff;
+  --border: #e3e6ea;
+
+  --ink: #1e2329;
+  --ink-muted: #707a8a;
+
+  --paper: #ffffff;
+  --paper-shadow: rgba(30, 35, 41, 0.08);
+  --line-paper: #ebedf0;
+
+  --accent: #c9950c;
+  --accent-hover: #a97e0a;
+  --stamp-blue: #1e56a0;
+  --stamp-amber: #b07f08;
+  --stamp-red: #cf304a;
+  --success: #03a66d;
+
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+
+  --radius: 6px;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  color: #222;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+p {
+  margin: 0 0 12px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+a {
+  color: var(--stamp-blue);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
 }
 
 button {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: white;
+  font-family: var(--font-body);
+  font-size: 14px;
   cursor: pointer;
-  font-size: 15px;
 }
 
-button:hover {
-  background: #1d4ed8;
-}
-
-button:disabled {
-  background: #999;
-  cursor: not-allowed;
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--stamp-blue);
+  outline-offset: 2px;
 }
 
 input {
   display: block;
   width: 100%;
-  padding: 10px;
-  margin: 8px 0 16px;
-
-  border: 1px solid #ccc;
-  border-radius: 6px;
-
-  font-size: 15px;
+  padding: 10px 12px;
+  margin: 6px 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font-size: 14.5px;
+  font-family: var(--font-body);
 }
 
-.container {
-  width: 900px;
-  max-width: 90%;
-  margin: 40px auto;
+input[disabled] {
+  background: #f0f1f3;
+  color: var(--ink-muted);
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
+label {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
   align-items: center;
-
-  margin-bottom: 30px;
-}
-
-.navbar {
-  padding: 20px;
-
-  background: #111827;
-}
-
-.navbar a {
-  color: white;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
   text-decoration: none;
-  font-weight: bold;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
 }
 
-.wallet-box {
-  padding: 10px;
+.btn-stamp {
+  background: var(--accent);
+  color: #1e2329;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.12);
 }
 
-.invoice-form,
-.payment-card {
-  background: white;
-  padding: 25px;
-  margin-bottom: 30px;
-
-  border-radius: 10px;
-
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.btn-stamp:hover:not(:disabled) {
+  background: var(--accent-hover);
 }
 
-.invoice-list {
-  margin-top: 30px;
+/* The one deliberate flourish: pressing a payment/creation action
+   physically "stamps down" - shadow flattens, button drops slightly. */
+.btn-stamp:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0.12);
 }
 
-.invoice-card {
-  background: white;
-
-  padding: 20px;
-  margin-bottom: 15px;
-
-  border-radius: 8px;
-
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+.btn-large {
+  padding: 15px 28px;
+  font-size: 16px;
 }
 
-.invoice-card a {
-  display: inline-block;
-  margin-top: 10px;
-
-  color: #2563eb;
-  text-decoration: none;
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink);
 }
 
-.payment-page {
-  max-width: 600px;
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(30, 35, 41, 0.04);
 }
 
-.payment-card {
-  text-align: center;
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12.5px;
 }
 
-.transaction {
-  margin-top: 20px;
-  padding: 15px;
-
-  background: #f3f4f6;
-
-  border-radius: 6px;
+.btn-block {
+  display: flex;
+  width: 100%;
+  margin-top: 14px;
 }
 
-.hash {
-  word-break: break-all;
-  font-size: 13px;
+.button-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.button-row .btn {
+  flex: 1;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-stamp:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ---------- generic page wrapper ---------- */
+
+.page {
+  max-width: 1080px;
+}
+
+.page-head {
+  margin-bottom: 24px;
+}
+
+.subtitle {
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 860px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.empty-state {
+  color: var(--ink-muted);
+  padding: 24px 0;
 }
 
 .error {
-  color: #dc2626;
-  margin-top: 15px;
+  color: var(--stamp-red);
+  margin-top: 8px;
+  font-size: 13.5px;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--ink-muted);
+  background: #f8f4e8;
+  border-left: 3px solid var(--stamp-amber);
+  padding: 8px 12px;
+  border-radius: 2px;
+  margin: 12px 0;
+}
+
+.hint--warning {
+  border-left-color: var(--stamp-red);
+  background: #fbecef;
+}
+
+/* ---------- toasts ---------- */
+
+.toast-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.toast {
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 13.5px;
+  max-width: 320px;
+  box-shadow: 0 8px 24px rgba(30, 35, 41, 0.15);
+  cursor: pointer;
+}
+
+.toast--success {
+  border-left: 3px solid var(--success);
+}
+
+.toast--error {
+  border-left: 3px solid var(--stamp-red);
+}
+
+.toast--info {
+  border-left: 3px solid var(--stamp-blue);
 }

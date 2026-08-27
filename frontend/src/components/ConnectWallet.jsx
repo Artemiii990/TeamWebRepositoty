@@ -1,40 +1,47 @@
-import { useState } from "react";
-import { connectWallet } from "../services/blockchain";
+import { useWallet } from "../context/WalletContext";
+import { shortenAddress } from "../utils/format";
 
+// Small widget rendered in the AppShell top bar. Shows a "Connect MetaMask" button when no wallet is connected, or the connected
+// address + a warning banner if MetaMask is on the wrong network. All the actual connection logic lives in WalletContext - 
+// this component only reads that state and renders it.
 function ConnectWallet() {
-  const [address, setAddress] = useState("");
-  const [error, setError] = useState("");
-
-  async function handleConnect() {
-    try {
-      setError("");
-
-      const wallet = await connectWallet();
-
-      setAddress(wallet.address);
-    } catch (error) {
-      setError(error.message);
-    }
-  }
+  const {
+    address,
+    isConnected,
+    isOnCorrectNetwork,
+    expectedNetworkName,
+    isConnecting,
+    isSwitching,
+    error,
+    connect,
+    switchNetwork,
+  } = useWallet();
 
   return (
     <div className="wallet-box">
-      {!address ? (
-        <button onClick={handleConnect}>
-          Connect MetaMask
+      {!isConnected ? (
+        <button className="btn btn-stamp" onClick={connect} disabled={isConnecting}>
+          {isConnecting ? "Connecting..." : "Connect MetaMask"}
         </button>
       ) : (
-        <p>
-          Wallet: {address.slice(0, 6)}...
-          {address.slice(-4)}
-        </p>
+        <div className="wallet-pill">
+          <span className="wallet-dot" aria-hidden="true" />
+          <span className="wallet-address" title={address}>
+            {shortenAddress(address)}
+          </span>
+        </div>
       )}
 
-      {error && (
-        <p className="error">
-          {error}
-        </p>
+      {isConnected && !isOnCorrectNetwork && (
+        <div className="network-warning">
+          <span>Wrong network - switch to {expectedNetworkName}</span>
+          <button className="btn btn-ghost btn-small" onClick={switchNetwork} disabled={isSwitching}>
+            {isSwitching ? "Switching..." : "Switch network"}
+          </button>
+        </div>
       )}
+
+      {error && <p className="error">{error}</p>}
     </div>
   );
 }

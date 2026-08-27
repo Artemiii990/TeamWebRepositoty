@@ -1,0 +1,326 @@
+/* ---------- wallet ---------- */
+
+.wallet-box {
+  text-align: right;
+}
+
+.wallet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.wallet-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(3, 166, 109, 0.15);
+}
+
+.network-warning {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  font-size: 12.5px;
+  color: var(--stamp-amber);
+}
+
+/* ---------- invoice form ---------- */
+
+.invoice-form,
+.payment-card {
+  background: var(--paper);
+  color: var(--ink);
+  padding: 26px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px var(--paper-shadow);
+}
+
+.invoice-form h2 {
+  color: var(--ink);
+}
+
+.invoice-form--locked {
+  color: var(--ink-muted);
+}
+
+.step-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-muted);
+}
+
+.step-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.step-item--active .step-icon {
+  border-color: var(--stamp-blue);
+  color: var(--stamp-blue);
+}
+
+.step-item--active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.step-item--done .step-icon {
+  background: var(--stamp-blue);
+  border-color: var(--stamp-blue);
+  color: #fff;
+}
+
+.step-item--done {
+  color: var(--ink);
+}
+
+.step-item--error .step-icon {
+  background: var(--stamp-red);
+  border-color: var(--stamp-red);
+  color: #fff;
+}
+
+.step-item--error {
+  color: var(--stamp-red);
+}
+
+/* ---------- invoice list / receipt cards ---------- */
+
+.invoice-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--ink);
+}
+
+.receipt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.receipt-card {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 22px 20px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px var(--paper-shadow);
+  overflow: hidden;
+}
+
+.receipt-perforation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background-image: radial-gradient(circle, var(--bg) 2.5px, transparent 2.6px);
+  background-size: 16px 12px;
+  background-position: 6px -6px;
+}
+
+.receipt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.receipt-no {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  letter-spacing: 0.03em;
+}
+
+.receipt-desc {
+  color: var(--ink);
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--line-paper);
+  color: var(--ink-muted);
+}
+
+.receipt-row strong {
+  color: var(--ink);
+}
+
+.receipt-card--large {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 30px 28px 26px;
+}
+
+.amount-display {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 4px 0 16px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--stamp-blue);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.tx-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-paper);
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
+.tx-label {
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+
+.tx-hash {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+/* ---------- stamp tracker (signature element) ---------- */
+
+.stamp-tracker {
+  display: flex;
+  align-items: flex-start;
+  margin: 18px 0;
+}
+
+.stamp-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  text-align: center;
+}
+
+.stamp {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  border: 2px solid var(--border);
+  color: var(--ink-muted);
+  background: #fff;
+  transform: rotate(0deg);
+}
+
+.stamp--inked {
+  border-color: var(--stamp-blue);
+  color: var(--stamp-blue);
+  background: rgba(30, 86, 160, 0.08);
+  transform: rotate(-6deg);
+}
+
+.stamp--current.stamp--inked {
+  box-shadow: 0 0 0 3px rgba(30, 86, 160, 0.15);
+}
+
+.stamp-label {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 6px;
+  color: var(--ink-muted);
+}
+
+.stamp-sublabel {
+  font-size: 10.5px;
+  color: var(--stamp-amber);
+  margin-top: 2px;
+}
+
+.stamp-perforation {
+  position: absolute;
+  top: 19px;
+  left: 60%;
+  width: 80%;
+  border-top: 2px dashed var(--line-paper);
+  z-index: -1;
+}
+
+.stamp-tracker--compact .stamp {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+
+.stamp-tracker--compact .stamp-perforation {
+  top: 14px;
+}
+
+.stamp-tracker--compact .stamp-label {
+  font-size: 10px;
+}
+
+/* ---------- payment page ---------- */
+
+.payment-page {
+  max-width: 640px;
+}
+
+.payment-card {
+  text-align: left;
+}

@@ -1,44 +1,32 @@
-import { Link } from "react-router-dom";
+import InvoiceCard from "./InvoiceCard";
 
-function InvoiceList({ invoices }) {
+// Pure display grid of InvoiceCards, plus a header with a "refresh all" button. 
+function InvoiceList({ invoices, isLoading, error, onRefresh, refreshingId, onRefreshAll }) {
   return (
     <div className="invoice-list">
-      <h2>Invoice List</h2>
+      <header className="invoice-list-head">
+        <h2>Invoices</h2>
+        <button type="button" className="btn btn-ghost btn-small" onClick={onRefreshAll} disabled={isLoading}>
+          {isLoading ? "Refreshing\u2026" : "Refresh all"}
+        </button>
+      </header>
 
-      {invoices.length === 0 ? (
-        <p>No invoices yet.</p>
-      ) : (
-        invoices.map((invoice) => (
-          <div className="invoice-card" key={invoice.id}>
-            <h3>
-              Invoice #{invoice.id}
-            </h3>
+      {error && <p className="error">{error}</p>}
 
-            <p>
-              Description: {invoice.description}
-            </p>
-
-            <p>
-              Amount: {invoice.amount} ETH
-            </p>
-
-            <p>
-              Status: <strong>{invoice.status}</strong>
-            </p>
-
-            {invoice.transactionHash && (
-              <p>
-                Transaction:{" "}
-                {invoice.transactionHash.slice(0, 10)}...
-              </p>
-            )}
-
-            <Link to={`/pay/${invoice.id}`}>
-              Open Payment Page
-            </Link>
-          </div>
-        ))
+      {!isLoading && invoices.length === 0 && !error && (
+        <p className="empty-state">No invoices yet. Create one to get a payment link.</p>
       )}
+
+      <div className="receipt-grid">
+        {invoices.map((invoice) => (
+          <InvoiceCard
+            key={invoice.invoice_id}
+            invoice={invoice}
+            onRefresh={onRefresh}
+            isRefreshing={refreshingId === invoice.invoice_id}
+          />
+        ))}
+      </div>
     </div>
   );
 }
