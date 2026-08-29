@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
@@ -16,27 +15,21 @@ contract CryptoPaymentGatewayTest is Test {
 
     uint256 public invoiceAmount = 1 ether;
 
-    // Тестовый контракт должен уметь получать ETH.
     receive() external payable {}
 
     function setUp() public {
-        // Создаем реестр пользователей.
         registry = new UserRegistry(address(this));
 
-        // Создаем платежный шлюз.
         gateway = new CryptoPaymentGateway(address(registry));
 
-        // Регистрируем merchant.
         vm.prank(merchant);
 
         registry.registerUser("Merchant", UserRegistry.UserRole.MERCHANT);
 
-        // Регистрируем customer.
         vm.prank(customer);
 
         registry.registerUser("Customer", UserRegistry.UserRole.CUSTOMER);
 
-        // Регистрируем второго customer.
         vm.prank(anotherCustomer);
 
         registry.registerUser(
@@ -44,10 +37,6 @@ contract CryptoPaymentGatewayTest is Test {
             UserRegistry.UserRole.CUSTOMER
         );
     }
-
-    // ============================================================
-    // USER REGISTRY
-    // ============================================================
 
     function testMerchantIsRegisteredCorrectly() public {
         UserRegistry.User memory user = registry.getUser(merchant);
@@ -81,10 +70,6 @@ contract CryptoPaymentGatewayTest is Test {
             UserRegistry.UserRole.MERCHANT
         );
     }
-
-    // ============================================================
-    // INVOICE CREATION
-    // ============================================================
 
     function testCreateInvoice() public {
         vm.prank(merchant);
@@ -140,10 +125,6 @@ contract CryptoPaymentGatewayTest is Test {
         gateway.createInvoice(invoiceAmount, "");
     }
 
-    // ============================================================
-    // INVOICE CREATED EVENT
-    // ============================================================
-
     function testInvoiceCreatedEvent() public {
         vm.prank(merchant);
 
@@ -167,10 +148,6 @@ contract CryptoPaymentGatewayTest is Test {
         string description,
         uint256 timestamp
     );
-
-    // ============================================================
-    // PAYMENT
-    // ============================================================
 
     function testPayInvoice() public {
         vm.prank(merchant);
@@ -286,10 +263,6 @@ contract CryptoPaymentGatewayTest is Test {
         gateway.payInvoice{value: invoiceAmount}(999);
     }
 
-    // ============================================================
-    // PAYMENT EVENT
-    // ============================================================
-
     function testInvoicePaidEvent() public {
         vm.prank(merchant);
 
@@ -314,10 +287,6 @@ contract CryptoPaymentGatewayTest is Test {
         address indexed customer,
         uint256 amount
     );
-
-    // ============================================================
-    // ADMIN
-    // ============================================================
 
     function testOwnerIsSetCorrectly() public view {
         assertEq(gateway.admin(), address(this));
@@ -374,10 +343,6 @@ contract CryptoPaymentGatewayTest is Test {
         gateway.payInvoice{value: invoiceAmount}(invoiceId);
     }
 
-    // ============================================================
-    // ADMIN - INVOICE STATUS
-    // ============================================================
-
     function testAdminCanChangeInvoiceStatus() public {
         vm.prank(merchant);
 
@@ -428,10 +393,6 @@ contract CryptoPaymentGatewayTest is Test {
         );
     }
 
-    // ============================================================
-    // ADMIN - EMERGENCY WITHDRAW
-    // ============================================================
-
     function testEmergencyWithdraw() public {
         vm.deal(address(gateway), 2 ether);
 
@@ -461,10 +422,6 @@ contract CryptoPaymentGatewayTest is Test {
 
         gateway.emergencyWithdraw(2 ether);
     }
-
-    // ============================================================
-    // USER ACTIVATION / DEACTIVATION
-    // ============================================================
 
     function testAdminCanDeactivateUser() public {
         registry.deactivateUser(merchant);
@@ -508,10 +465,6 @@ contract CryptoPaymentGatewayTest is Test {
 
         gateway.payInvoice{value: invoiceAmount}(invoiceId);
     }
-
-    // ============================================================
-    // BALANCE
-    // ============================================================
 
     function testGetContractBalance() public view {
         assertEq(gateway.getContractBalance(), 0);
